@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple A-Frame Environment</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script>
+    /**
+     * "vector-wave" component
+     * Directly manipulates the 3D position vectors of a mesh geometry
+     */
+    AFRAME.registerComponent('vector-wave', {
+      schema: {
+        speed: { type: 'number', default: 1.5 },
+        amplitude: { type: 'number', default: 0.15 },
+        complexity: { type: 'number', default: 4.0 },
+        color: { type: 'color', default: '#4CC3D9' }
+      },
+
+      init: function () {
+        this.el.addEventListener('object3dset', () => {
+          this.setupGeometry();
+        });
+        this.setupGeometry();
+      },
+
+      setupGeometry: function () {
+        const mesh = this.el.getObject3D('mesh');
+        if (!mesh) return;
+
+        this.geometry = mesh.geometry;
+        this.positionAttribute = this.geometry.attributes.position;
+
+        this.initialZ = new Float32Array(this.positionAttribute.count);
+        for (let i = 0; i < this.positionAttribute.count; i++) {
+          this.initialZ[i] = this.positionAttribute.getZ(i);
+        }
+      },
+
+      tick: function (time, timeDelta) {
+        if (!this.positionAttribute) return;
+
+        const t = time / 1000;
+        const count = this.positionAttribute.count;
+
+        for (let i = 0; i < count; i++) {
+          const x = this.positionAttribute.getX(i);
+          const y = this.positionAttribute.getY(i);
+
+          // Enhanced math for larger scale surfaces
+          const wave1 = Math.sin(x * (this.data.complexity * 0.5) + t * this.data.speed);
+          const wave2 = Math.cos(y * (this.data.complexity * 0.3) + t * (this.data.speed * 0.7));
+          const ripple = Math.sin(Math.sqrt(x*x + y*y) * 0.5 - t * this.data.speed);
+          
+          const newZ = (wave1 + wave2 + ripple) * this.data.amplitude;
+
+          this.positionAttribute.setZ(i, newZ);
+        }
+
+        this.positionAttribute.needsUpdate = true;
+      }
+    });
+  </script>
+  <style>
+    body { margin: 0; background-color: #000; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <a-scene renderer="antialias: true; colorManagement: true; highRefreshRate: false;" shadow="type: pcfsoft">
+    <!-- Sky -->
+    <a-sky id="sky" color="#87CEEB"></a-sky>
+
+    <!-- Ground -->
+    <a-plane id="ground" position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#4CAF50" material="" geometry=""></a-plane>
+
+    <!-- Pool Structure -->
+    <a-entity id="pool-structure" position="-1.222 0.68269 -11.521" scale="1.47125 0.761 1">
+      <!-- Water Entity -->
+      <a-entity 
+        id="pool-water" 
+        geometry="primitive: plane; width: 4.79; height: 15.322; segmentsWidth: 64; segmentsHeight: 64" 
+        material="color: #00aaff; opacity: 0.75; transparent: true; metalness: 0.8; roughness: 0.1; side: double; emissive: #002233" 
+        position="0 0 0" 
+        rotation="-90 -90 0" 
+        vector-wave="speed: 1.2; amplitude: 0.12; complexity: 2.5"
+        scale="0.5 0.5436 0.5">
+      </a-entity>
+
+      <!-- Pool Walls -->
+      <!-- Floor -->
+      <a-box position="0 -0.5 0" width="8" height="0.1" depth="3" color="#ccc" material="" geometry=""></a-box>
+      <!-- Long Walls -->
+      <a-box position="0 0 1.5" width="8" height="1" depth="0.1" color="#eee" material="" geometry=""></a-box>
+      <a-box position="0 0 -1.5" width="8" height="1" depth="0.1" color="#eee" material="" geometry=""></a-box>
+      <!-- Short Walls -->
+      <a-box position="4 0 0" width="0.1" height="1" depth="3" color="#eee" material="" geometry=""></a-box>
+      <a-box position="-4 0 0" width="0.1" height="1" depth="3" color="#eee" material="" geometry=""></a-box>
+    </a-entity>
+
+    <!-- LA Mansion -->
+    <a-entity id="laMansion" gltf-model="Models/la_mansion.glb" position="7.077 0 1.576" scale="0.5 0.5 0.5"></a-entity>
+
+    <!-- GMC Yukon XL -->
+    <a-entity id="gmcYukon" gltf-model="Models/gmc_yukon_xl_presidential_state_car.glb" position="18.32492 0.000 12.79567" scale="0.5 0.5 0.5"></a-entity>
+
+    <!-- Garden Lamps -->
+    <a-entity id="lamp1" gltf-model="Models/low_poly_garden_lamp__stylized_outdoor_light.glb" position="-8.4637 0 15.31658" scale="3 3 3"></a-entity>
+    <a-entity id="lamp2" gltf-model="Models/low_poly_garden_lamp__stylized_outdoor_light.glb" position="16.24495 -0.06255 15.17024" scale="3 3 3"></a-entity>
+
+    <!-- Camera Rig -->
+    <a-entity id="cameraRig" position="0 1.6 0">
+      <a-camera id="camera"></a-camera>
+      <a-cursor id="cursor" color="white"></a-cursor>
+    </a-entity>
+
+    <!-- Lighting -->
+    <a-light id="ambientLight" type="ambient" color="#BBB"></a-light>
+    <a-light id="directionalLight" type="directional" position="1 2 1" intensity="0.8"></a-light>
+  </a-scene>
+</body>
+</html>
